@@ -1,0 +1,50 @@
+services:
+  bd:
+    image: mariadb:10.6
+    container_name: bd
+    hostname: bd
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: prueba_bd
+      MARIADB_USER: lukas
+      MARIADB_PASSWORD: lukas123
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/initdb.d/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mi-red
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./web
+    container_name: api
+    hostname: api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      bd:
+        condition: service_healthy
+    networks:
+      - mi-red
+    environment:
+      DB_HOST: bd
+      DB_USER: lukas
+      DB_PASSWORD: lukas123
+      DB_NAME: prueba_bd
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  db_data:
+
+networks:
+  mi-red:
